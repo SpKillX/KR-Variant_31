@@ -40,14 +40,26 @@
     <nav class="bg-indigo-600 text-white p-4 shadow-lg">
         <div class="container mx-auto flex justify-between items-center">
             <h1 class="text-2xl font-bold">🍽️ BookingSystem Pro</h1>
-            <div id="auth-section" class="flex gap-4">
+            <div id="auth-section" class="flex gap-4 items-center">
                 <!-- Dynamic Auth Content -->
             </div>
         </div>
     </nav>
 
     <main class="container mx-auto p-6">
-        <!-- Top Bar: Restaurant Info -->
+        <!-- Admin Panel (Hidden by default) -->
+        <div id="admin-panel" class="hidden bg-red-50 border-l-4 border-red-500 p-4 mb-8 rounded-r-xl shadow-sm">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h3 class="text-red-800 font-bold text-lg">🛡️ Панель Администратора</h3>
+                    <p class="text-red-600 text-sm">Вы вошли с расширенными правами. Вам доступны инструменты управления залом.</p>
+                </div>
+                <button onclick="alert('В разработке: Редактирование координат столов')" class="bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-red-700 transition">
+                    Управление картой
+                </button>
+            </div>
+        </div>
+
         <div id="restaurant-info" class="bg-white p-6 rounded-xl shadow-md mb-8 flex justify-between items-center">
             <div>
                 <h2 id="res-name" class="text-3xl font-bold text-gray-800">Загрузка...</h2>
@@ -59,20 +71,14 @@
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <!-- Left: Restaurant Selection -->
             <div class="bg-white p-6 rounded-xl shadow-md">
                 <h3 class="text-xl font-semibold mb-4">Рестораны</h3>
-                <div id="restaurants-list" class="space-y-3">
-                    <!-- List of restaurants -->
-                </div>
+                <div id="restaurants-list" class="space-y-3"></div>
             </div>
 
-            <!-- Center: Hall Map -->
             <div class="lg:col-span-2 bg-white p-6 rounded-xl shadow-md text-center">
                 <h3 class="text-xl font-semibold mb-4">Карта зала (Зона: <span id="current-zone">...</span>)</h3>
-                <div class="table-grid" id="hall-map">
-                    <!-- Tables rendered here -->
-                </div>
+                <div class="table-grid" id="hall-map"></div>
                 <div class="mt-4 flex justify-center gap-6 text-sm">
                     <div class="flex items-center gap-2"><span class="w-4 h-4 available rounded"></span> Свободен</div>
                     <div class="flex items-center gap-2"><span class="w-4 h-4 unavailable rounded"></span> Занят</div>
@@ -109,33 +115,93 @@
         </div>
     </div>
 
+    <!-- Login Modal -->
+    <div id="login-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="bg-white p-8 rounded-2xl shadow-2xl w-96">
+            <h3 class="text-2xl font-bold mb-6 text-center">Вход в систему</h3>
+            <form id="login-form" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Имя пользователя</label>
+                    <input type="text" id="login-username" value="admin" required class="w-full p-2 border rounded-lg">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Пароль</label>
+                    <input type="password" id="login-password" value="password" required class="w-full p-2 border rounded-lg">
+                </div>
+                <div class="flex justify-end gap-3 mt-6">
+                    <button type="button" onclick="closeLoginModal()" class="px-4 py-2 text-gray-500 hover:text-gray-700">Отмена</button>
+                    <button type="submit" class="bg-indigo-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-indigo-700">Войти</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script>
         let token = localStorage.getItem('jwt_token');
         let currentRestaurantId = null;
+        let currentUser = null;
 
-        // --- AUTH LOGIC ---
+        async function loadUserProfile() {
+            if (!token) return;
+            try {
+                const res = await fetch('/api/v1/auth/me', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                if (res.ok) {
+                    currentUser = await res.json();
+                    updateAuthUI();
+                    updateAdminPanel();
+                }
+            } catch (e) { console.error("Error loading profile", e); }
+        }
+
+        function updateAdminPanel() {
+            const panel = document.getElementById('admin-panel');
+            if (currentUser && currentUser.role === 'admin') {
+                panel.classList.remove('hidden');
+            } else {
+                panel.classList.add('hidden');
+            }
+        }
+
         function updateAuthUI() {
             const authSection = document.getElementById('auth-section');
             if (token) {
+                const roleBadge = currentUser ? 
+                    `<span class="bg-indigo-800 text-xs px-2 py-1 rounded-full uppercase font-bold">${currentUser.role}</span>` : 
+                    '';
+                const userName = currentUser ? currentUser.username : 'Пользователь';
+                
                 authSection.innerHTML = `
-                    <span class="text-sm opacity-80">Авторизован ✅</span>
+                    <div class="flex items-center gap-2">
+                        <span class="text-sm opacity-80">${userName}</span>
+                        ${roleBadge}
+                    </div>
                     <button onclick="logout()" class="bg-red-500 px-3 py-1 rounded text-sm hover:bg-red-600 transition">Выйти</button>
                 `;
             } else {
                 authSection.innerHTML = `
-                    <button onclick="showLogin()" class="bg-white text-indigo-600 px-4 py-1 rounded text-sm font-bold hover:bg-gray-100 transition">Войти</button>
+                    <button onclick="showLogin()" class="bg-white text-indigo-600 px-4 py-1 rounded text-sm font-bold hover:bg-indigo-100 transition">Войти</button>
                 `;
             }
         }
 
-        async function showLogin() {
-            const user = prompt("Введите username (по умолчанию 'admin'):", "admin");
-            const pass = prompt("Введите пароль (по умолчанию 'password'):", "password");
-            if (!user || !pass) return;
+        function showLogin() {
+            document.getElementById('login-modal').style.display = 'flex';
+        }
+
+        function closeLoginModal() {
+            document.getElementById('login-modal').style.display = 'none';
+        }
+
+        document.getElementById('login-form').onsubmit = async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('login-username').value;
+            const password = document.getElementById('login-password').value;
 
             const params = new URLSearchParams();
-            params.append('username', user);
-            params.append('password', pass);
+            params.append('username', username);
+            params.append('password', password);
 
             try {
                 const res = await fetch('/api/v1/auth/login', { 
@@ -147,21 +213,24 @@
                     const data = await res.json();
                     token = data.access_token;
                     localStorage.setItem('jwt_token', token);
+                    await loadUserProfile();
                     updateAuthUI();
+                    closeLoginModal();
                     alert("Успешный вход!");
                 } else {
                     alert("Ошибка авторизации");
                 }
             } catch (e) { alert("Ошибка сети"); }
-        }
+        };
 
         function logout() {
             localStorage.removeItem('jwt_token');
             token = null;
+            currentUser = null;
             updateAuthUI();
+            updateAdminPanel();
         }
 
-        // --- DATA LOGIC ---
         async function loadRestaurants() {
             const res = await fetch('/api/v1/restaurants');
             const data = await res.json();
@@ -179,8 +248,7 @@
             document.getElementById('res-name').innerText = name;
             document.getElementById('res-address').innerText = address;
             document.getElementById('nav-link').href = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
-            
-            loadRestaurants(); // Update active state
+            loadRestaurants();
             loadZones(id);
         }
 
@@ -188,7 +256,7 @@
             const res = await fetch(`/api/v1/restaurants/${resId}/zones`);
             const data = await res.json();
             if (data.length > 0) {
-                renderHallMap(data[0]); // For demo, we load the first zone
+                renderHallMap(data[0]);
                 document.getElementById('current-zone').innerText = data[0].name;
             }
         }
@@ -196,10 +264,9 @@
         function renderHallMap(zone) {
             const map = document.getElementById('hall-map');
             map.innerHTML = '';
-            
             zone.tables.forEach(t => {
                 const node = document.createElement('div');
-                node.className = `table-node ${t.is_available ? 'available' : 'unavailable'}`; // In real app, this would be a dynamic check
+                node.className = `table-node available`; 
                 node.style.left = t.x_coord + 'px';
                 node.style.top = t.y_coord + 'px';
                 node.style.width = '50px';
@@ -246,16 +313,15 @@
             if (res.ok) {
                 alert("Стол успешно забронирован! Ожидайте уведомление.");
                 closeModal();
-                // In a real app, we'd refresh the map here
             } else {
                 const err = await res.json();
                 alert("Ошибка: " + err.detail);
             }
         };
 
-        // Init
         updateAuthUI();
         loadRestaurants();
+        loadUserProfile();
     </script>
 </body>
 </html>

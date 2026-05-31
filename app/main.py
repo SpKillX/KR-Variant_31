@@ -23,39 +23,35 @@ def send_booking_notification(customer_name: str, table_number: int, start_time:
 # Initialize database tables
 Base.metadata.create_all(bind=engine)
 def seed_data(db: Session):
-    if db.query(models.Restaurant).first():
-        return
+    # 1. Seed Restaurants, Zones and Tables (only if DB is empty)
+    if not db.query(models.Restaurant).first():
+        res1 = models.Restaurant(name="Гурман", address="ул. Фридерика Энгельса, 15, Тула")
+        res2 = models.Restaurant(name="Звезда", address="пр. Ленина, 40, Тула")
+        db.add_all([res1, res2])
+        db.commit()
 
-    # 1. Create Restaurants with Tula addresses
-    res1 = models.Restaurant(name="Гурман", address="ул. Фридерика Энгельса, 15, Тула")
-    res2 = models.Restaurant(name="Звезда", address="пр. Ленина, 40, Тула")
-    db.add_all([res1, res2])
-    db.commit()
+        zone1 = models.Zone(restaurant_id=res1.id, name="Основной зал")
+        zone2 = models.Zone(restaurant_id=res1.id, name="Терраса")
+        zone3 = models.Zone(restaurant_id=res2.id, name="VIP-зал")
+        db.add_all([zone1, zone2, zone3])
+        db.commit()
 
-    # 2. Create Zones
-    zone1 = models.Zone(restaurant_id=res1.id, name="Основной зал")
-    zone2 = models.Zone(restaurant_id=res1.id, name="Терраса")
-    zone3 = models.Zone(restaurant_id=res2.id, name="VIP-зал")
-    db.add_all([zone1, zone2, zone3])
-    db.commit()
+        tables1 = [
+            models.Table(zone_id=zone1.id, number=1, capacity=2, x_coord=10.0, y_coord=10.0),
+            models.Table(zone_id=zone1.id, number=2, capacity=2, x_coord=20.0, y_coord=10.0),
+            models.Table(zone_id=zone1.id, number=3, capacity=4, x_coord=10.0, y_coord=20.0),
+            models.Table(zone_id=zone2.id, number=4, capacity=2, x_coord=50.0, y_coord=50.0),
+        ]
 
-    # 3. Create Tables with coordinates
-    tables1 = [
-        models.Table(zone_id=zone1.id, number=1, capacity=2, x_coord=10.0, y_coord=10.0),
-        models.Table(zone_id=zone1.id, number=2, capacity=2, x_coord=20.0, y_coord=10.0),
-        models.Table(zone_id=zone1.id, number=3, capacity=4, x_coord=10.0, y_coord=20.0),
-        models.Table(zone_id=zone2.id, number=4, capacity=2, x_coord=50.0, y_coord=50.0),
-    ]
+        tables2 = [
+            models.Table(zone_id=zone3.id, number=1, capacity=6, x_coord=100.0, y_coord=100.0),
+            models.Table(zone_id=zone3.id, number=2, capacity=6, x_coord=120.0, y_coord=100.0),
+        ]
 
-    tables2 = [
-        models.Table(zone_id=zone3.id, number=1, capacity=6, x_coord=100.0, y_coord=100.0),
-        models.Table(zone_id=zone3.id, number=2, capacity=6, x_coord=120.0, y_coord=100.0),
-    ]
+        db.add_all(tables1 + tables2)
+        db.commit()
 
-    db.add_all(tables1 + tables2)
-    db.commit()
-
-    # 4. Create Default Admin User
+    # 2. Always ensure Default Admin User exists
     from .core.security import get_password_hash
     from .models import user as user_models
 
@@ -67,7 +63,6 @@ def seed_data(db: Session):
         )
         db.add(admin_user)
         db.commit()
-
 async def lifespan(app: FastAPI):
     with SessionLocal() as db:
         seed_data(db)
