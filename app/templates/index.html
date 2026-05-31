@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Бронирование столиков</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f8f9fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .restaurant-card { cursor: pointer; transition: transform 0.2s; }
+        .restaurant-card:hover { transform: scale(1.02); }
+        .table-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 20px; }
+        .table-item { 
+            aspect-ratio: 1; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+            border-radius: 12px; 
+            cursor: pointer; 
+            font-weight: bold; 
+            transition: all 0.3s ease;
+            border: 3px solid transparent;
+        }
+        .table-item.available { background-color: #d1e7dd; color: #0f5132; border-color: #badbcc; }
+        .table-item.occupied { background-color: #f8d7da; color: #842029; cursor: not-allowed; border-color: #f5c2c7; }
+        .table-item:hover:not(.occupied) { transform: translateY(-5px); box-shadow: 0 4px 15px rgba(0,0,0,0.1); border-color: #0d6efd; }
+        .table-capacity { font-size: 0.8rem; font-weight: normal; }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-dark bg-primary mb-4">
+        <div class="container">
+            <span class="navbar-brand mb-0 h1">🍽️ Система бронирования столиков</span>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="row">
+            <!-- Left Side: Restaurant Selection -->
+            <div class="col-md-4">
+                <div class="card shadow-sm p-3 mb-4">
+                    <h5>1. Выберите ресторан</h5>
+                    <div id="restaurant-list" class="list-group mt-3">
+                        <!-- Restaurants loaded via JS -->
+                    </div>
+                </div>
+                <div class="card shadow-sm p-3" id="booking-form-card" style="display: none;">
+                    <h5>2. Детали бронирования</h5>
+                    <div class="mb-3 mt-3">
+                        <label class="form-label">Ваше имя</label>
+                        <input type="text" id="customer-name" class="form-control" placeholder="Иван Иванов">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Время</label>
+                        <input type="datetime-local" id="booking-time" class="form-control">
+                    </div>
+                    <button id="btn-confirm" class="btn btn-success w-100">Забронировать</button>
+                </div>
+            </div>
+
+            <!-- Right Side: Table Map -->
+            <div class="col-md-8">
+                <div class="card shadow-sm p-4">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h4 id="selected-restaurant-name">Выберите ресторан слева</h4>
+                        <div class="d-flex gap-3">
+                            <small><span class="badge bg-success">●</span> Свободен</small>
+                            <small><span class="badge bg-danger">●</span> Занят</small>
+                        </div>
+                    </div>
+                    <div id="table-map" class="table-grid">
+                        <!-- Tables loaded via JS -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let currentRestaurantId = null;
+        let selectedTableId = null;
+
+        async function loadRestaurants() {
+            const res = await fetch('/api/restaurants');
+            const data = await res.json();
+            const list = document.getElementById('restaurant-list');
+            list.innerHTML = data.map(r => `
+                <a href="#" class="list-group-item list-group-item-action" onclick="selectRestaurant(${r.id}, '${r.name}')">
+                    <strong>${r.name}</strong><br>
+                    <small class="text-muted">${r.address}</small>
+                </a>
+            `).join('');
+        }
+
+        async function selectRestaurant(id, name) {
+            currentRestaurantId = id;
+            document.getElementById('selected-restaurant-name').innerText = `Зал ресторана: ${name}`;
+            document.getElementById('booking-form-card').style.display = 'none';
+            
+            const res = await fetch(`/api/restaurants/${id}/tables`);
+            const tables = await res.json();
+            
+            const map = document.getElementById('table-map');
+            map.innerHTML = tables.map(t => `
+                <div class="table-item ${t.is_available ? 'available' : 'occupied'}" 
+                     onclick="selectTable(${t.id}, ${t.is_available})" 
+                     id="table-${t.id}">
+                    <div>Стол №${t.number}</div>
+                    <div class="table-capacity">Мест: ${t.capacity}</div>
+                </div>
+            `).join('');
+        }
+
+        function selectTable(id, available) {
+            if (!available) return;
+            selectedTableId = id;
+            
+            // Highlight selected
+            document.querySelectorAll('.table-item').forEach(el => el.style.borderColor = 'transparent');
+            document.getElementById(`table-${id}`).style.borderColor = '#0d6efd';
+            
+            document.getElementById('booking-form-card').style.display = 'block';
+        }
+
+        document.getElementById('btn-confirm').onclick = async () => {
+            const name = document.getElementById('customer-name').value;
+            const time = document.getElementById('booking-time').value;
+
+            if (!name || !time) {
+                alert('Пожалуйста, введите имя и время');
+                return;
+            }
+
+            const payload = {
+                table_id: selectedTableId,
+                customer_name: name,
+                booking_time: new Date(time).toISOString()
+            };
+
+            const res = await fetch('/api/bookings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (res.ok) {
+                alert('Стол успешно забронирован!');
+                const tableEl = document.getElementById(`table-${selectedTableId}`);
+                tableEl.className = 'table-item occupied';
+                document.getElementById('booking-form-card').style.display = 'none';
+            } else {
+                const err = await res.json();
+                alert('Ошибка: ' + err.detail);
+            }
+        };
+
+        // Init
+        window.onload = () => {
+            loadRestaurants();
+            // Set default time to now
+            const now = new Date();
+            now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+            document.getElementById('booking-time').value = now.toISOString().slice(0, 16);
+        };
+    </script>
+</body>
+</html>
