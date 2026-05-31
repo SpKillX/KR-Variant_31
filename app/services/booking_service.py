@@ -1,5 +1,6 @@
 from sqlalchemy.orm import Session
-from . import models, schemas
+from ..models import booking as models
+from ..schemas import booking as schemas
 from datetime import datetime
 
 def get_restaurants(db: Session):

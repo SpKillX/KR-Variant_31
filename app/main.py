@@ -6,8 +6,10 @@ from sqlalchemy.orm import Session
 from contextlib import asynccontextmanager
 from datetime import datetime
 
-from .database import Base, engine, get_db, SessionLocal
-from . import models, schemas, crud
+from .db.session import Base, engine, get_db, SessionLocal
+from .models import booking as models
+from .schemas import booking as schemas
+from .services import booking_service as crud
 
 # Initialize database tables
 Base.metadata.create_all(bind=engine)
