@@ -1,22 +1,34 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
 from ...db.session import get_db
 from ...schemas import booking as schemas
 from ...services.booking_service import BookingService
 from .auth import get_current_user
 from ...models.user import User
+from ...main import send_booking_notification
 
 router = APIRouter()
 
 @router.post("/", response_model=schemas.BookingRead)
 def create_booking(
     booking: schemas.BookingCreate, 
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db), 
     current_user: User = Depends(get_current_user)
 ):
     result = BookingService.create_booking(db, booking)
     if not result:
         raise HTTPException(status_code=400, detail="Table is not available for the selected time interval")
+    
+    # Get table number for notification
+    table = db.query(models.Table).filter(models.Table.id == result.table_id).first()
+    background_tasks.add_task(
+        send_booking_notification, 
+        result.customer_name, 
+        table.number, 
+        result.start_time
+    )
+    
     return result
 
 @router.delete("/{booking_id}")
