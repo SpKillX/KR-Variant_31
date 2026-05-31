@@ -13,8 +13,8 @@ RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
 
 COPY . .
 
-# Setup entrypoint for migrations and app start
-COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+# Generate entrypoint script directly in the image to avoid Windows CRLF issues
+RUN printf '#!/bin/sh\nset -e\n\necho "Starting application..."\nexec uvicorn app.main:app --host 0.0.0.0 --port 8000\n' > /entrypoint.sh && \
+    chmod +x /entrypoint.sh
 
 ENTRYPOINT ["/entrypoint.sh"]

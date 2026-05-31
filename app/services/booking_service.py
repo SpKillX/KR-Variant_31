@@ -1,8 +1,8 @@
 from sqlalchemy.orm import Session
 from sqlalchemy.orm import Session
 from sqlalchemy import and_
-from ..models import booking as models
-from ..schemas import booking as schemas
+from app.models import booking as models
+from app.schemas import booking as schemas
 from datetime import datetime
 
 class BookingService:

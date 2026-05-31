@@ -1,28 +1,17 @@
-from fastapi import FastAPI, Depends, HTTPException, Request, BackgroundTasks
+from fastapi import FastAPI, Depends, HTTPException, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 from contextlib import asynccontextmanager
 from datetime import datetime
-import time
 
 from .db.session import Base, engine, get_db, SessionLocal
 from .models import booking as models
 from .api.v1 import api_router
 
-# Simulation of a notification system
-def send_booking_notification(customer_name: str, table_number: int, start_time: datetime):
-    # In a real app, this would call an SMS/Email API (e.g., Twilio, SendGrid)
-    print(f"--- NOTIFICATION SYSTEM ---")
-    print(f"Sending confirmation to {customer_name}...")
-    time.sleep(2) # Simulate network delay
-    print(f"SUCCESS: Table {table_number} reserved for {start_time}. Notification sent!")
-    print(f"--------------------------")
-
 # Initialize database tables
 Base.metadata.create_all(bind=engine)
-
 def seed_data(db: Session):
     if db.query(models.Restaurant).first():
         return

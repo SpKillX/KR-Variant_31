@@ -3,255 +3,168 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BookingSystem Pro - Демонстрация</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>Бронирование столиков</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        .table-grid {
-            position: relative;
-            width: 600px;
-            height: 400px;
-            background: #f3f4f6;
-            border: 2px solid #d1d5db;
-            border-radius: 8px;
-            margin: 0 auto;
-        }
-        .table-node {
-            position: absolute;
+        body { background-color: #f8f9fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .restaurant-card { cursor: pointer; transition: transform 0.2s; }
+        .restaurant-card:hover { transform: scale(1.02); }
+        .table-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 20px; }
+        .table-item { 
+            aspect-ratio: 1; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+            border-radius: 12px; 
+            cursor: pointer; 
+            font-weight: bold; 
             transition: all 0.3s ease;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            color: white;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            border: 3px solid transparent;
         }
-        .table-node:hover {
-            transform: scale(1.1);
-            z-index: 10;
-        }
-        .available { background-color: #10b981; }
-        .unavailable { background-color: #ef4444; }
+        .table-item.available { background-color: #d1e7dd; color: #0f5132; border-color: #badbcc; }
+        .table-item.occupied { background-color: #f8d7da; color: #842029; cursor: not-allowed; border-color: #f5c2c7; }
+        .table-item:hover:not(.occupied) { transform: translateY(-5px); box-shadow: 0 4px 15px rgba(0,0,0,0.1); border-color: #0d6efd; }
+        .table-capacity { font-size: 0.8rem; font-weight: normal; }
     </style>
 </head>
-<body class="bg-gray-100 font-sans">
-
-    <nav class="bg-indigo-600 text-white p-4 shadow-lg">
-        <div class="container mx-auto flex justify-between items-center">
-            <h1 class="text-2xl font-bold">🍽️ BookingSystem Pro</h1>
-            <div id="auth-section" class="flex gap-4">
-                <!-- Dynamic Auth Content -->
-            </div>
+<body>
+    <nav class="navbar navbar-dark bg-primary mb-4">
+        <div class="container">
+            <span class="navbar-brand mb-0 h1">🍽️ Система бронирования столиков</span>
         </div>
     </nav>
 
-    <main class="container mx-auto p-6">
-        <!-- Top Bar: Restaurant Info -->
-        <div id="restaurant-info" class="bg-white p-6 rounded-xl shadow-md mb-8 flex justify-between items-center">
-            <div>
-                <h2 id="res-name" class="text-3xl font-bold text-gray-800">Загрузка...</h2>
-                <p id="res-address" class="text-gray-500">Пожалуйста, выберите ресторан</p>
-            </div>
-            <a id="nav-link" target="_blank" class="bg-indigo-100 text-indigo-700 px-4 py-2 rounded-lg font-medium hover:bg-indigo-200 transition">
-                📍 Как добраться
-            </a>
-        </div>
-
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <!-- Left: Restaurant Selection -->
-            <div class="bg-white p-6 rounded-xl shadow-md">
-                <h3 class="text-xl font-semibold mb-4">Рестораны</h3>
-                <div id="restaurants-list" class="space-y-3">
-                    <!-- List of restaurants -->
-                </div>
-            </div>
-
-            <!-- Center: Hall Map -->
-            <div class="lg:col-span-2 bg-white p-6 rounded-xl shadow-md text-center">
-                <h3 class="text-xl font-semibold mb-4">Карта зала (Зона: <span id="current-zone">...</span>)</h3>
-                <div class="table-grid" id="hall-map">
-                    <!-- Tables rendered here -->
-                </div>
-                <div class="mt-4 flex justify-center gap-6 text-sm">
-                    <div class="flex items-center gap-2"><span class="w-4 h-4 available rounded"></span> Свободен</div>
-                    <div class="flex items-center gap-2"><span class="w-4 h-4 unavailable rounded"></span> Занят</div>
-                </div>
-            </div>
-        </div>
-    </main>
-
-    <!-- Booking Modal -->
-    <div id="booking-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
-        <div class="bg-white p-8 rounded-2xl shadow-2xl w-96">
-            <h3 class="text-2xl font-bold mb-4">Бронирование стола №<span id="modal-table-num"></span></h3>
-            <form id="booking-form" class="space-y-4">
-                <input type="hidden" id="modal-table-id">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Ваше имя</label>
-                    <input type="text" id="customer-name" required class="w-full p-2 border rounded-lg">
-                </div>
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Начало</label>
-                        <input type="datetime-local" id="start-time" required class="w-full p-2 border rounded-lg">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Конец</label>
-                        <input type="datetime-local" id="end-time" required class="w-full p-2 border rounded-lg">
+    <div class="container">
+        <div class="row">
+            <!-- Left Side: Restaurant Selection -->
+            <div class="col-md-4">
+                <div class="card shadow-sm p-3 mb-4">
+                    <h5>1. Выберите ресторан</h5>
+                    <div id="restaurant-list" class="list-group mt-3">
+                        <!-- Restaurants loaded via JS -->
                     </div>
                 </div>
-                <div class="flex justify-end gap-3 mt-6">
-                    <button type="button" onclick="closeModal()" class="px-4 py-2 text-gray-500 hover:text-gray-700">Отмена</button>
-                    <button type="submit" class="bg-indigo-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-indigo-700">Забронировать</button>
+                <div class="card shadow-sm p-3" id="booking-form-card" style="display: none;">
+                    <h5>2. Детали бронирования</h5>
+                    <div class="mb-3 mt-3">
+                        <label class="form-label">Ваше имя</label>
+                        <input type="text" id="customer-name" class="form-control" placeholder="Иван Иванов">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Время</label>
+                        <input type="datetime-local" id="booking-time" class="form-control">
+                    </div>
+                    <button id="btn-confirm" class="btn btn-success w-100">Забронировать</button>
                 </div>
-            </form>
+            </div>
+
+            <!-- Right Side: Table Map -->
+            <div class="col-md-8">
+                <div class="card shadow-sm p-4">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h4 id="selected-restaurant-name">Выберите ресторан слева</h4>
+                        <div class="d-flex gap-3">
+                            <small><span class="badge bg-success">●</span> Свободен</small>
+                            <small><span class="badge bg-danger">●</span> Занят</small>
+                        </div>
+                    </div>
+                    <div id="table-map" class="table-grid">
+                        <!-- Tables loaded via JS -->
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        let token = localStorage.getItem('jwt_token');
         let currentRestaurantId = null;
+        let selectedTableId = null;
 
-        // --- AUTH LOGIC ---
-        function updateAuthUI() {
-            const authSection = document.getElementById('auth-section');
-            if (token) {
-                authSection.innerHTML = `
-                    <span class="text-sm opacity-80">Авторизован ✅</span>
-                    <button onclick="logout()" class="bg-red-500 px-3 py-1 rounded text-sm hover:bg-red-600 transition">Выйти</button>
-                `;
-            } else {
-                authSection.innerHTML = `
-                    <button onclick="showLogin()" class="bg-white text-indigo-600 px-4 py-1 rounded text-sm font-bold hover:bg-gray-100 transition">Войти</button>
-                `;
-            }
-        }
-
-        async function showLogin() {
-            const user = prompt("Введите username (по умолчанию 'admin'):");
-            const pass = prompt("Введите пароль (по умолчанию 'password'):");
-            if (!user || !pass) return;
-
-            const formData = new FormData();
-            formData.append('username', user);
-            formData.append('password', pass);
-
-            try {
-                const res = await fetch('/api/v1/auth/login', { method: 'POST', body: formData });
-                if (res.ok) {
-                    const data = await res.json();
-                    token = data.access_token;
-                    localStorage.setItem('jwt_token', token);
-                    updateAuthUI();
-                    alert("Успешный вход!");
-                } else {
-                    alert("Ошибка авторизации");
-                }
-            } catch (e) { alert("Ошибка сети"); }
-        }
-
-        function logout() {
-            localStorage.removeItem('jwt_token');
-            token = null;
-            updateAuthUI();
-        }
-
-        // --- DATA LOGIC ---
         async function loadRestaurants() {
-            const res = await fetch('/api/v1/restaurants');
+            const res = await fetch('/api/restaurants');
             const data = await res.json();
-            const list = document.getElementById('restaurants-list');
+            const list = document.getElementById('restaurant-list');
             list.innerHTML = data.map(r => `
-                <div onclick="selectRestaurant(${r.id}, '${r.name}', '${r.address}')" 
-                     class="p-3 border rounded-lg cursor-pointer hover:bg-indigo-50 transition ${currentRestaurantId === r.id ? 'border-indigo-600 bg-indigo-50 font-bold' : 'bg-white'}">
-                    ${r.name}
+                <a href="#" class="list-group-item list-group-item-action" onclick="selectRestaurant(${r.id}, '${r.name}')">
+                    <strong>${r.name}</strong><br>
+                    <small class="text-muted">${r.address}</small>
+                </a>
+            `).join('');
+        }
+
+        async function selectRestaurant(id, name) {
+            currentRestaurantId = id;
+            document.getElementById('selected-restaurant-name').innerText = `Зал ресторана: ${name}`;
+            document.getElementById('booking-form-card').style.display = 'none';
+            
+            const res = await fetch(`/api/restaurants/${id}/tables`);
+            const tables = await res.json();
+            
+            const map = document.getElementById('table-map');
+            map.innerHTML = tables.map(t => `
+                <div class="table-item ${t.is_available ? 'available' : 'occupied'}" 
+                     onclick="selectTable(${t.id}, ${t.is_available})" 
+                     id="table-${t.id}">
+                    <div>Стол №${t.number}</div>
+                    <div class="table-capacity">Мест: ${t.capacity}</div>
                 </div>
             `).join('');
         }
 
-        async function selectRestaurant(id, name, address) {
-            currentRestaurantId = id;
-            document.getElementById('res-name').innerText = name;
-            document.getElementById('res-address').innerText = address;
-            document.getElementById('nav-link').href = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
+        function selectTable(id, available) {
+            if (!available) return;
+            selectedTableId = id;
             
-            loadRestaurants(); // Update active state
-            loadZones(id);
-        }
-
-        async function loadZones(resId) {
-            const res = await fetch(`/api/v1/restaurants/${resId}/zones`);
-            const data = await res.json();
-            if (data.length > 0) {
-                renderHallMap(data[0]); // For demo, we load the first zone
-                document.getElementById('current-zone').innerText = data[0].name;
-            }
-        }
-
-        function renderHallMap(zone) {
-            const map = document.getElementById('hall-map');
-            map.innerHTML = '';
+            // Highlight selected
+            document.querySelectorAll('.table-item').forEach(el => el.style.borderColor = 'transparent');
+            document.getElementById(`table-${id}`).style.borderColor = '#0d6efd';
             
-            zone.tables.forEach(t => {
-                const node = document.createElement('div');
-                node.className = `table-node ${t.is_available ? 'available' : 'unavailable'}`; // In real app, this would be a dynamic check
-                node.style.left = t.x_coord + 'px';
-                node.style.top = t.y_coord + 'px';
-                node.style.width = '50px';
-                node.style.height = '50px';
-                node.innerText = t.number;
-                node.onclick = () => openBooking(t.id, t.number);
-                map.appendChild(node);
-            });
+            document.getElementById('booking-form-card').style.display = 'block';
         }
 
-        function openBooking(id, num) {
-            if (!token) {
-                alert("Для бронирования нужно войти в систему!");
-                showLogin();
+        document.getElementById('btn-confirm').onclick = async () => {
+            const name = document.getElementById('customer-name').value;
+            const time = document.getElementById('booking-time').value;
+
+            if (!name || !time) {
+                alert('Пожалуйста, введите имя и время');
                 return;
             }
-            document.getElementById('modal-table-id').value = id;
-            document.getElementById('modal-table-num').innerText = num;
-            document.getElementById('booking-modal').style.display = 'flex';
-        }
 
-        function closeModal() {
-            document.getElementById('booking-modal').style.display = 'none';
-        }
-
-        document.getElementById('booking-form').onsubmit = async (e) => {
-            e.preventDefault();
-            const data = {
-                table_id: parseInt(document.getElementById('modal-table-id').value),
-                customer_name: document.getElementById('customer-name').value,
-                start_time: document.getElementById('start-time').value,
-                end_time: document.getElementById('end-time').value
+            const payload = {
+                table_id: selectedTableId,
+                customer_name: name,
+                booking_time: new Date(time).toISOString()
             };
 
-            const res = await fetch('/api/v1/bookings', {
+            const res = await fetch('/api/bookings', {
                 method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'Authorization': 'Bearer ' + token 
-                },
-                body: JSON.stringify(data)
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
             });
 
             if (res.ok) {
-                alert("Стол успешно забронирован! Ожидайте уведомление.");
-                closeModal();
-                // In a real app, we'd refresh the map here
+                alert('Стол успешно забронирован!');
+                const tableEl = document.getElementById(`table-${selectedTableId}`);
+                tableEl.className = 'table-item occupied';
+                document.getElementById('booking-form-card').style.display = 'none';
             } else {
                 const err = await res.json();
-                alert("Ошибка: " + err.detail);
+                alert('Ошибка: ' + err.detail);
             }
         };
 
         // Init
-        updateAuthUI();
-        loadRestaurants();
+        window.onload = () => {
+            loadRestaurants();
+            // Set default time to now
+            const now = new Date();
+            now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+            document.getElementById('booking-time').value = now.toISOString().slice(0, 16);
+        };
     </script>
 </body>
 </html>
