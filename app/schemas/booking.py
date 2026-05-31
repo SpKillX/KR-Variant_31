@@ -5,14 +5,27 @@ from typing import List, Optional
 class TableBase(BaseModel):
     number: int
     capacity: int
-    is_available: bool = True
+    x_coord: float = 0.0
+    y_coord: float = 0.0
 
 class TableCreate(TableBase):
-    restaurant_id: int
+    zone_id: int
 
 class TableRead(TableBase):
     id: int
+    zone_id: int
+    model_config = ConfigDict(from_attributes=True)
+
+class ZoneBase(BaseModel):
+    name: str
+
+class ZoneCreate(ZoneBase):
     restaurant_id: int
+
+class ZoneRead(ZoneBase):
+    id: int
+    restaurant_id: int
+    tables: List[TableRead] = []
     model_config = ConfigDict(from_attributes=True)
 
 class RestaurantBase(BaseModel):
@@ -24,17 +37,19 @@ class RestaurantCreate(RestaurantBase):
 
 class RestaurantRead(RestaurantBase):
     id: int
-    tables: List[TableRead] = []
+    zones: List[ZoneRead] = []
     model_config = ConfigDict(from_attributes=True)
 
 class BookingCreate(BaseModel):
     table_id: int
     customer_name: str
-    booking_time: datetime
+    start_time: datetime
+    end_time: datetime
 
 class BookingRead(BaseModel):
     id: int
     table_id: int
     customer_name: str
-    booking_time: datetime
+    start_time: datetime
+    end_time: datetime
     model_config = ConfigDict(from_attributes=True)
