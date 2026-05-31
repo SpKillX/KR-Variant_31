@@ -1,11 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
-from ...db.session import get_db
-from ...schemas import booking as schemas
-from ...services.booking_service import BookingService
+from app.db.session import get_db
+from app.schemas import booking as schemas
+from app.services.booking_service import BookingService
 from .auth import get_current_user
-from ...models.user import User
-from ...main import send_booking_notification
+from app.models.user import User
+from app.services.notification_service import send_booking_notification
 
 router = APIRouter()
 
