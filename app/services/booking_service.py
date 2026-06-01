@@ -2,6 +2,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import and_
 from app.models import booking as models
 from app.schemas import booking as schemas
+from app.core.config import settings
 from datetime import datetime, time
 import datetime as dt
 
@@ -44,6 +45,11 @@ class BookingService:
 
     @staticmethod
     def create_booking(db: Session, booking_data: schemas.BookingCreate, user_id: int = None):
+        # Duration validation
+        duration = (booking_data.end_time - booking_data.start_time).total_seconds() / 60
+        if duration < settings.MIN_BOOKING_DURATION or duration > settings.MAX_BOOKING_DURATION:
+            return "duration_error"
+
         if not BookingService.is_table_available(db, booking_data.table_id, booking_data.start_time, booking_data.end_time):
             return None
 
@@ -74,12 +80,23 @@ class BookingService:
         if not db_booking:
             return None
         
-        # If table or time is changing, check availability first
+        # If table or time is changing, check availability and duration
         if 'table_id' in update_data or 'start_time' in update_data or 'end_time' in update_data:
             new_table_id = update_data.get('table_id', db_booking.table_id)
             new_start = update_data.get('start_time', db_booking.start_time)
             new_end = update_data.get('end_time', db_booking.end_time)
             
+            # Convert strings to datetime objects if necessary
+            if isinstance(new_start, str):
+                new_start = datetime.fromisoformat(new_start)
+            if isinstance(new_end, str):
+                new_end = datetime.fromisoformat(new_end)
+            
+            # Duration validation
+            duration = (new_end - new_start).total_seconds() / 60
+            if duration < settings.MIN_BOOKING_DURATION or duration > settings.MAX_BOOKING_DURATION:
+                return "duration_error"
+
             # To avoid overlapping with itself, we can't just use is_table_available.
             # A simple way for a course project: check if ANY other booking overlaps.
             overlapping = db.query(models.Booking).filter(
@@ -91,6 +108,12 @@ class BookingService:
             
             if overlapping:
                 return "unavailable"
+            
+            # Update the values in update_data to the converted datetimes so they are saved correctly
+            if 'start_time' in update_data:
+                update_data['start_time'] = new_start
+            if 'end_time' in update_data:
+                update_data['end_time'] = new_end
 
         for key, value in update_data.items():
             setattr(db_booking, key, value)

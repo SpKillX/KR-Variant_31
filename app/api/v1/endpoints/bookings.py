@@ -7,6 +7,7 @@ from .auth import get_current_user, check_admin_role
 from app.models import booking as models
 from app.models.user import User, UserRole
 from app.services.notification_service import send_booking_notification
+from app.core.config import settings
 from datetime import datetime, time
 
 router = APIRouter()
@@ -50,6 +51,11 @@ def create_booking(
     current_user: User = Depends(get_current_user)
 ):
     result = BookingService.create_booking(db, booking, user_id=current_user.id)
+    if result == "duration_error":
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Booking duration must be between {settings.MIN_BOOKING_DURATION} and {settings.MAX_BOOKING_DURATION} minutes"
+        )
     if not result:
         raise HTTPException(status_code=400, detail="Table is not available for the selected time interval")
     
@@ -89,6 +95,14 @@ def get_all_bookings_admin(
 ):
     return BookingService.get_all_bookings(db)
 
+@router.get("/admin/search", response_model=list[schemas.BookingRead])
+def search_bookings_by_phone(
+    phone: str = Query(..., description="User phone number to search"),
+    db: Session = Depends(get_db), 
+    admin: User = Depends(check_admin_role)
+):
+    return db.query(models.Booking).join(User).filter(User.phone == phone).all()
+
 @router.patch("/admin/{booking_id}", response_model=schemas.BookingRead)
 def update_booking_admin(
     booking_id: int, 
@@ -99,6 +113,11 @@ def update_booking_admin(
     result = BookingService.update_booking(db, booking_id, update_data)
     if result == "unavailable":
         raise HTTPException(status_code=400, detail="Table is not available for the new time interval")
+    if result == "duration_error":
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Booking duration must be between {settings.MIN_BOOKING_DURATION} and {settings.MAX_BOOKING_DURATION} minutes"
+        )
     if not result:
         raise HTTPException(status_code=404, detail="Booking not found")
     return result
