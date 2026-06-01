@@ -1,13 +1,15 @@
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Query
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Query, Body
 from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.schemas import booking as schemas
 from app.services.booking_service import BookingService
-from .auth import get_current_user
+from .auth import get_current_user, check_admin_role
 from app.models import booking as models
-from app.models.user import User
+from app.models.user import User, UserRole
 from app.services.notification_service import send_booking_notification
 from datetime import datetime, time
+
+router = APIRouter()
 
 @router.get("/my", response_model=list[schemas.BookingRead])
 def get_my_bookings(
@@ -68,6 +70,35 @@ def cancel_booking(
     db: Session = Depends(get_db), 
     current_user: User = Depends(get_current_user)
 ):
-    if not BookingService.cancel_booking(db, booking_id):
+    booking = db.query(models.Booking).filter(models.Booking.id == booking_id).first()
+    if not booking:
         raise HTTPException(status_code=404, detail="Booking not found")
+    
+    # Only owner or admin can cancel
+    if booking.user_id != current_user.id and current_user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Not authorized to cancel this booking")
+
+    if not BookingService.cancel_booking(db, booking_id):
+        raise HTTPException(status_code=500, detail="Error canceling booking")
     return {"detail": "Booking cancelled"}
+
+@router.get("/admin/all", response_model=list[schemas.BookingRead])
+def get_all_bookings_admin(
+    db: Session = Depends(get_db), 
+    admin: User = Depends(check_admin_role)
+):
+    return BookingService.get_all_bookings(db)
+
+@router.patch("/admin/{booking_id}", response_model=schemas.BookingRead)
+def update_booking_admin(
+    booking_id: int, 
+    update_data: dict = Body(...),
+    db: Session = Depends(get_db), 
+    admin: User = Depends(check_admin_role)
+):
+    result = BookingService.update_booking(db, booking_id, update_data)
+    if result == "unavailable":
+        raise HTTPException(status_code=400, detail="Table is not available for the new time interval")
+    if not result:
+        raise HTTPException(status_code=404, detail="Booking not found")
+    return result

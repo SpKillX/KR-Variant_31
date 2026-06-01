@@ -58,13 +58,22 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
 
 @router.post("/register", response_model=schemas.UserRead)
 def register(user_in: schemas.UserCreate, db: Session = Depends(get_db)):
-    # Check if user already exists
+    # Check if username already exists
     existing_user = db.query(models.User).filter(models.User.username == user_in.username).first()
     if existing_user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Username already registered"
         )
+    
+    # Check if phone already exists
+    if user_in.phone:
+        existing_phone = db.query(models.User).filter(models.User.phone == user_in.phone).first()
+        if existing_phone:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Phone number already registered"
+            )
     
     hashed_pw = security.get_password_hash(user_in.password)
     db_user = models.User(

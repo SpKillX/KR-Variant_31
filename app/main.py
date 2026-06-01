@@ -4,8 +4,7 @@ from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 from contextlib import asynccontextmanager
-from datetime import datetime
-import time
+from datetime import datetime, time
 
 from .db.session import Base, engine, get_db, SessionLocal
 from .models import booking as models
@@ -14,9 +13,10 @@ from .api.v1 import api_router
 # Simulation of a notification system
 def send_booking_notification(customer_name: str, table_number: int, start_time: datetime):
     # In a real app, this would call an SMS/Email API (e.g., Twilio, SendGrid)
+    import time as sleep_module
     print(f"--- NOTIFICATION SYSTEM ---")
     print(f"Sending confirmation to {customer_name}...")
-    time.sleep(2) # Simulate network delay
+    sleep_module.sleep(2) # Simulate network delay
     print(f"SUCCESS: Table {table_number} reserved for {start_time}. Notification sent!")
     print(f"--------------------------")
 
@@ -25,8 +25,8 @@ Base.metadata.create_all(bind=engine)
 def seed_data(db: Session):
     # 1. Seed Restaurants, Zones and Tables (only if DB is empty)
     if not db.query(models.Restaurant).first():
-        res1 = models.Restaurant(name="Гурман", address="пр. Ленина 92, Тула", opening_time="09:00", closing_time="23:00")
-        res2 = models.Restaurant(name="Звезда", address="Советская 47, Тула", opening_time="10:00", closing_time="00:00")
+        res1 = models.Restaurant(name="Гурман", address="пр. Ленина 92, Тула", opening_time=time(9, 0), closing_time=time(23, 0))
+        res2 = models.Restaurant(name="Звезда", address="Советская 47, Тула", opening_time=time(10, 0), closing_time=time(23, 59))
         db.add_all([res1, res2])
         db.commit()
 

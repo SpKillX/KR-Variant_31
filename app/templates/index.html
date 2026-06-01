@@ -228,8 +228,114 @@
         window.onload = () => {
             const now = new Date();
             document.getElementById('param-date').value = now.toISOString().split('T')[0];
-            document.getElementById('param-start').value = "18:00";
-            document.getElementById('param-end').value = "19:30";
+            document.getElementById('param-start').value = "12:00";
+            document.getElementById('param-end').value = "14:00";
+            
+            // Bind Auth Handlers
+            document.getElementById('login-form').onsubmit = async (e) => {
+                e.preventDefault();
+                console.log("Login form submitted");
+                const username = document.getElementById('login-username').value;
+                const password = document.getElementById('login-password').value;
+
+                const params = new URLSearchParams();
+                params.append('username', username);
+                params.append('password', password);
+
+                try {
+                    const res = await fetch('/api/v1/auth/login', { 
+                        method: 'POST', 
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: params 
+                    });
+                    if (res.ok) {
+                        const data = await res.json();
+                        token = data.access_token;
+                        localStorage.setItem('jwt_token', token);
+                        await loadUserProfile();
+                        updateAuthUI();
+                        closeLoginModal();
+                        alert("Успешный вход!");
+                    } else {
+                        const err = await res.json();
+                        alert("Ошибка авторизации: " + (err.detail || "Неизвестная ошибка"));
+                    }
+                } catch (e) { 
+                    console.error("Login error:", e);
+                    alert("Ошибка сети при входе"); 
+                }
+            };
+
+            document.getElementById('register-form').onsubmit = async (e) => {
+                e.preventDefault();
+                console.log("Register form submitted");
+                const username = document.getElementById('reg-username').value;
+                const phone = document.getElementById('reg-phone').value;
+                const password = document.getElementById('reg-password').value;
+
+                try {
+                    const res = await fetch('/api/v1/auth/register', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ 
+                            username: username, 
+                            phone: phone,
+                            password: password,
+                            role: 'client' 
+                        })
+                    });
+                    if (res.ok) {
+                        alert("Аккаунт успешно создан! Теперь вы можете войти.");
+                        closeRegisterModal();
+                        showLogin();
+                    } else {
+                        const err = await res.json();
+                        alert("Ошибка регистрации: " + err.detail);
+                    }
+                } catch (e) { 
+                    console.error("Register error:", e);
+                    alert("Ошибка сети при регистрации"); 
+                }
+            };
+            
+            // Bind Booking Handler
+            document.getElementById('booking-form').onsubmit = async (e) => {
+                e.preventDefault();
+                console.log("Booking form submitted");
+                const date = document.getElementById('param-date').value;
+                const start = document.getElementById('param-start').value;
+                const end = document.getElementById('param-end').value;
+                
+                const data = {
+                    table_id: parseInt(document.getElementById('modal-table-id').value),
+                    customer_name: document.getElementById('customer-name').value,
+                    start_time: `${date}T${start}:00`,
+                    end_time: `${date}T${end}:00`
+                };
+
+                try {
+                    const res = await fetch('/api/v1/bookings/', {
+                        method: 'POST',
+                        headers: { 
+                            'Content-Type': 'application/json',
+                            'Authorization': 'Bearer ' + token 
+                        },
+                        body: JSON.stringify(data)
+                    });
+
+                    if (res.ok) {
+                        alert("Стол успешно забронирован! Ожидайте уведомление.");
+                        closeModal();
+                        updateAvailability();
+                    } else {
+                        const err = await res.json();
+                        alert("Ошибка: " + err.detail);
+                    }
+                } catch (e) {
+                    console.error("Booking error:", e);
+                    alert("Ошибка сети при бронировании");
+                }
+            };
             
             updateAuthUI();
             loadRestaurants();
@@ -252,12 +358,90 @@
 
         function updateAdminPanel() {
             const panel = document.getElementById('admin-panel');
+            const bookingSection = document.getElementById('admin-bookings-section');
             if (currentUser && currentUser.role === 'admin') {
                 panel.classList.remove('hidden');
+                bookingSection.classList.remove('hidden');
+                loadAllBookings();
             } else {
                 panel.classList.add('hidden');
+                bookingSection.classList.add('hidden');
             }
         }
+
+        async function loadAllBookings() {
+            if (!token) return;
+            try {
+                const res = await fetch('/api/v1/bookings/admin/all', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                if (res.ok) {
+                    const bookings = await res.json();
+                    const list = document.getElementById('admin-bookings-list');
+                    list.innerHTML = bookings.map(b => `
+                        <tr class="border-b hover:bg-gray-50">
+                            <td class="py-2">${b.id}</td>
+                            <td class="py-2 font-medium">${b.customer_name}</td>
+                            <td class="py-2">Стол №${b.table_id}</td>
+                            <td class="py-2 text-xs">${new Date(b.start_time).toLocaleString()}</td>
+                            <td class="py-2 text-right space-x-2">
+                                <button onclick="openEditBooking(${JSON.stringify(b).replace(/"/g, '&quot;')})" class="text-indigo-600 hover:text-indigo-800 font-bold">Edit</button>
+                                <button onclick="cancelBooking(${b.id})" class="text-red-500 hover:text-red-700 font-bold">Delete</button>
+                            </td>
+                        </tr>
+                    `).join('');
+                }
+            } catch (e) { console.error("Error loading admin bookings", e); }
+        }
+
+        function openEditBooking(booking) {
+            document.getElementById('edit-booking-id').value = booking.id;
+            document.getElementById('edit-customer-name').value = booking.customer_name;
+            document.getElementById('edit-table-id').value = booking.table_id;
+            
+            // Format dates for datetime-local input (YYYY-MM-DDTHH:mm)
+            const start = new Date(booking.start_time).toISOString().slice(0, 16);
+            const end = new Date(booking.end_time).toISOString().slice(0, 16);
+            document.getElementById('edit-start-time').value = start;
+            document.getElementById('edit-end-time').value = end;
+            
+            document.getElementById('edit-booking-modal').style.display = 'flex';
+        }
+
+        function closeEditBookingModal() {
+            document.getElementById('edit-booking-modal').style.display = 'none';
+        }
+
+        document.getElementById('edit-booking-form').onsubmit = async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('edit-booking-id').value;
+            const data = {
+                customer_name: document.getElementById('edit-customer-name').value,
+                table_id: parseInt(document.getElementById('edit-table-id').value),
+                start_time: document.getElementById('edit-start-time').value,
+                end_time: document.getElementById('edit-end-time').value
+            };
+
+            try {
+                const res = await fetch(`/api/v1/bookings/admin/${id}`, {
+                    method: 'PATCH',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + token 
+                    },
+                    body: JSON.stringify(data)
+                });
+                if (res.ok) {
+                    alert("Бронирование обновлено");
+                    closeEditBookingModal();
+                    loadAllBookings();
+                    updateAvailability();
+                } else {
+                    const err = await res.json();
+                    alert("Ошибка: " + err.detail);
+                }
+            } catch (e) { alert("Ошибка сети"); }
+        };
 
         function updateAuthUI() {
             const authSection = document.getElementById('auth-section');
@@ -445,17 +629,20 @@
             const startInput = document.getElementById('param-start');
             const endInput = document.getElementById('param-end');
             
+            // Handle closing time '00:00' as '23:59' for HTML5 validation and comparisons
+            const effectiveClosing = closing === "00:00" ? "23:59" : closing;
+            
             startInput.min = opening;
-            startInput.max = closing;
+            startInput.max = effectiveClosing;
             endInput.min = opening;
-            endInput.max = closing;
+            endInput.max = effectiveClosing;
 
             // Reset values if they fall outside working hours
-            if (startInput.value < opening || startInput.value > closing) {
+            if (startInput.value < opening || startInput.value > effectiveClosing) {
                 startInput.value = opening;
             }
-            if (endInput.value < opening || endInput.value > closing) {
-                endInput.value = closing;
+            if (endInput.value < opening || endInput.value > effectiveClosing) {
+                endInput.value = effectiveClosing;
             }
             
             // Trigger availability update after resetting values
@@ -493,6 +680,7 @@
                     });
                     div.className = 'p-3 border rounded-lg cursor-pointer hover:bg-indigo-50 transition border-indigo-600 bg-indigo-50 font-bold';
                     
+                    renderHallMap(currentZone); // Render immediately
                     updateAvailability();
                 };
                 zoneList.appendChild(div);
@@ -501,6 +689,7 @@
             if (data.length > 0) {
                 currentZone = data[0];
                 document.getElementById('current-zone').innerText = data[0].name;
+                renderHallMap(currentZone); // Render immediately
                 updateAvailability();
             }
         }
@@ -519,6 +708,8 @@
                 if (res.ok) {
                     availableTableIds = await res.json();
                     renderHallMap(currentZone);
+                } else {
+                    console.error("Availability API error:", await res.text());
                 }
             } catch (e) {
                 console.error("Error fetching availability", e);
@@ -557,6 +748,7 @@
             const end = document.getElementById('param-end').value;
 
             document.getElementById('modal-table-id').value = id;
+            document.getElementById('customer-name').value = currentUser ? currentUser.username : '';
             document.getElementById('booking-summary').innerHTML = `
                 <p><strong>Стол:</strong> №${num}</p>
                 <p><strong>Дата:</strong> ${date}</p>
@@ -569,38 +761,6 @@
         function closeModal() {
             document.getElementById('booking-modal').style.display = 'none';
         }
-
-        document.getElementById('booking-form').onsubmit = async (e) => {
-            e.preventDefault();
-            const date = document.getElementById('param-date').value;
-            const start = document.getElementById('param-start').value;
-            const end = document.getElementById('param-end').value;
-            
-            const data = {
-                table_id: parseInt(document.getElementById('modal-table-id').value),
-                customer_name: document.getElementById('customer-name').value,
-                start_time: `${date}T${start}:00`,
-                end_time: `${date}T${end}:00`
-            };
-
-            const res = await fetch('/api/v1/bookings/', {
-                method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'Authorization': 'Bearer ' + token 
-                },
-                body: JSON.stringify(data)
-            });
-
-            if (res.ok) {
-                alert("Стол успешно забронирован! Ожидайте уведомление.");
-                closeModal();
-                updateAvailability();
-            } else {
-                const err = await res.json();
-                alert("Ошибка: " + err.detail);
-            }
-        };
 
         updateAuthUI();
         loadRestaurants();

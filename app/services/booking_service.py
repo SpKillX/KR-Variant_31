@@ -69,6 +69,41 @@ class BookingService:
         return False
 
     @staticmethod
+    def update_booking(db: Session, booking_id: int, update_data: dict):
+        db_booking = db.query(models.Booking).filter(models.Booking.id == booking_id).first()
+        if not db_booking:
+            return None
+        
+        # If table or time is changing, check availability first
+        if 'table_id' in update_data or 'start_time' in update_data or 'end_time' in update_data:
+            new_table_id = update_data.get('table_id', db_booking.table_id)
+            new_start = update_data.get('start_time', db_booking.start_time)
+            new_end = update_data.get('end_time', db_booking.end_time)
+            
+            # To avoid overlapping with itself, we can't just use is_table_available.
+            # A simple way for a course project: check if ANY other booking overlaps.
+            overlapping = db.query(models.Booking).filter(
+                models.Booking.id != booking_id,
+                models.Booking.table_id == new_table_id,
+                models.Booking.start_time < new_end,
+                models.Booking.end_time > new_start
+            ).first()
+            
+            if overlapping:
+                return "unavailable"
+
+        for key, value in update_data.items():
+            setattr(db_booking, key, value)
+        
+        db.commit()
+        db.refresh(db_booking)
+        return db_booking
+
+    @staticmethod
+    def get_all_bookings(db: Session):
+        return db.query(models.Booking).all()
+
+    @staticmethod
     def get_table_availability(db: Session, table_id: int, date: datetime):
         return db.query(models.Booking).filter(
             models.Booking.table_id == table_id,
