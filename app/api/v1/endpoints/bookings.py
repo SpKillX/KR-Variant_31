@@ -93,7 +93,14 @@ def get_all_bookings_admin(
     db: Session = Depends(get_db), 
     admin: User = Depends(check_admin_role)
 ):
-    return BookingService.get_all_bookings(db)
+    # Join with User to get the phone number
+    bookings = db.query(models.Booking).join(User).all()
+
+    # Map phone number to the booking object for the schema
+    for b in bookings:
+        b.user_phone = b.user.phone if b.user else None
+
+    return bookings
 
 @router.get("/admin/search", response_model=list[schemas.BookingRead])
 def search_bookings_by_phone(
@@ -101,7 +108,13 @@ def search_bookings_by_phone(
     db: Session = Depends(get_db), 
     admin: User = Depends(check_admin_role)
 ):
-    return db.query(models.Booking).join(User).filter(User.phone == phone).all()
+    # Join with User to get the phone number
+    bookings = db.query(models.Booking).join(User).filter(User.phone == phone).all()
+
+    for b in bookings:
+        b.user_phone = b.user.phone if b.user else None
+
+    return bookings
 
 @router.patch("/admin/{booking_id}", response_model=schemas.BookingRead)
 def update_booking_admin(

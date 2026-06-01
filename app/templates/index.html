@@ -485,6 +485,7 @@
                 <tr class="border-b hover:bg-gray-50">
                     <td class="py-2">${b.id}</td>
                     <td class="py-2 font-medium">${b.customer_name}</td>
+                    <td class="py-2 text-xs">${b.user_phone || '—'}</td>
                     <td class="py-2">Стол №${b.table_id}</td>
                     <td class="py-2 text-xs">${new Date(b.start_time).toLocaleString()}</td>
                     <td class="py-2 text-right space-x-2">

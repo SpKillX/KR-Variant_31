@@ -54,4 +54,5 @@ class BookingRead(BaseModel):
     customer_name: str
     start_time: datetime
     end_time: datetime
+    user_phone: Optional[str] = None
     model_config = ConfigDict(from_attributes=True)
