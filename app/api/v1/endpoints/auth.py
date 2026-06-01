@@ -70,6 +70,7 @@ def register(user_in: schemas.UserCreate, db: Session = Depends(get_db)):
     db_user = models.User(
         username=user_in.username,
         hashed_password=hashed_pw,
+        phone=user_in.phone,
         role=user_in.role
     )
     db.add(db_user)

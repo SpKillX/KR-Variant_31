@@ -44,8 +44,10 @@ class Booking(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     table_id = Column(Integer, ForeignKey("tables.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     customer_name = Column(String, nullable=False)
     start_time = Column(DateTime, nullable=False)
     end_time = Column(DateTime, nullable=False)
     
     table = relationship("Table", back_populates="bookings")
+    user = relationship("User", back_populates="bookings")

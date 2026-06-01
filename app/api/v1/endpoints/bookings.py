@@ -9,7 +9,12 @@ from app.models.user import User
 from app.services.notification_service import send_booking_notification
 from datetime import datetime, time
 
-router = APIRouter()
+@router.get("/my", response_model=list[schemas.BookingRead])
+def get_my_bookings(
+    db: Session = Depends(get_db), 
+    current_user: User = Depends(get_current_user)
+):
+    return db.query(models.Booking).filter(models.Booking.user_id == current_user.id).all()
 
 @router.get("/availability", response_model=list[int])
 def get_availability(
@@ -42,7 +47,7 @@ def create_booking(
     db: Session = Depends(get_db), 
     current_user: User = Depends(get_current_user)
 ):
-    result = BookingService.create_booking(db, booking)
+    result = BookingService.create_booking(db, booking, user_id=current_user.id)
     if not result:
         raise HTTPException(status_code=400, detail="Table is not available for the selected time interval")
     

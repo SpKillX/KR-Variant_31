@@ -43,12 +43,13 @@ class BookingService:
         return overlapping_bookings is None
 
     @staticmethod
-    def create_booking(db: Session, booking_data: schemas.BookingCreate):
+    def create_booking(db: Session, booking_data: schemas.BookingCreate, user_id: int = None):
         if not BookingService.is_table_available(db, booking_data.table_id, booking_data.start_time, booking_data.end_time):
             return None
 
         db_booking = models.Booking(
             table_id=booking_data.table_id,
+            user_id=user_id,
             customer_name=booking_data.customer_name,
             start_time=booking_data.start_time,
             end_time=booking_data.end_time

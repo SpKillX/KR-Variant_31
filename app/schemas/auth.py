@@ -12,11 +12,13 @@ class TokenData(BaseModel):
 class UserCreate(BaseModel):
     username: str
     password: str
+    phone: str | None = None
     role: UserRole = UserRole.CLIENT
 
 class UserRead(BaseModel):
     id: int
     username: str
+    phone: str | None = None
     role: UserRole
     
     class Config:
