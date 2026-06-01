@@ -1,9 +1,9 @@
 from sqlalchemy.orm import Session
-from sqlalchemy.orm import Session
 from sqlalchemy import and_
 from app.models import booking as models
 from app.schemas import booking as schemas
-from datetime import datetime
+from datetime import datetime, time
+import datetime as dt
 
 class BookingService:
     @staticmethod
@@ -12,6 +12,26 @@ class BookingService:
         Checks if a table is available for a given time interval.
         Intervals overlap if (StartA < EndB) AND (EndA > StartB).
         """
+        # Check Restaurant Working Hours
+        table = db.query(models.Table).filter(models.Table.id == table_id).first()
+        if not table:
+            return False
+            
+        zone = db.query(models.Zone).filter(models.Zone.id == table.zone_id).first()
+        restaurant = db.query(models.Restaurant).filter(models.Restaurant.id == zone.restaurant_id).first()
+        
+        # Convert booking times to time objects for comparison
+        booking_start = start_time.time()
+        booking_end = end_time.time()
+        
+        # Fix for midnight closing time: treat 00:00 as 23:59:59
+        actual_closing_time = restaurant.closing_time
+        if actual_closing_time == time(0, 0):
+            actual_closing_time = time(23, 59, 59)
+
+        if booking_start < restaurant.opening_time or booking_end > actual_closing_time:
+            return False
+
         overlapping_bookings = db.query(models.Booking).filter(
             and_(
                 models.Booking.table_id == table_id,
@@ -24,11 +44,9 @@ class BookingService:
 
     @staticmethod
     def create_booking(db: Session, booking_data: schemas.BookingCreate):
-        # 1. Dynamic Availability Check
         if not BookingService.is_table_available(db, booking_data.table_id, booking_data.start_time, booking_data.end_time):
             return None
 
-        # 2. Create Booking
         db_booking = models.Booking(
             table_id=booking_data.table_id,
             customer_name=booking_data.customer_name,
@@ -51,7 +69,6 @@ class BookingService:
 
     @staticmethod
     def get_table_availability(db: Session, table_id: int, date: datetime):
-        """Returns all bookings for a table on a specific date to help UI visualize occupied slots."""
         return db.query(models.Booking).filter(
             models.Booking.table_id == table_id,
             models.Booking.start_time >= date.replace(hour=0, minute=0, second=0),

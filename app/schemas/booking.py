@@ -1,5 +1,5 @@
 from pydantic import BaseModel, ConfigDict
-from datetime import datetime
+from datetime import datetime, time
 from typing import List, Optional
 
 class TableBase(BaseModel):
@@ -31,6 +31,8 @@ class ZoneRead(ZoneBase):
 class RestaurantBase(BaseModel):
     name: str
     address: str
+    opening_time: time
+    closing_time: time
 
 class RestaurantCreate(RestaurantBase):
     pass

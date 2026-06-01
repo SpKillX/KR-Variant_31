@@ -25,30 +25,64 @@ Base.metadata.create_all(bind=engine)
 def seed_data(db: Session):
     # 1. Seed Restaurants, Zones and Tables (only if DB is empty)
     if not db.query(models.Restaurant).first():
-        res1 = models.Restaurant(name="Гурман", address="ул. Фридерика Энгельса, 15, Тула")
-        res2 = models.Restaurant(name="Звезда", address="пр. Ленина, 40, Тула")
+        res1 = models.Restaurant(name="Гурман", address="пр. Ленина 92, Тула", opening_time="09:00", closing_time="23:00")
+        res2 = models.Restaurant(name="Звезда", address="Советская 47, Тула", opening_time="10:00", closing_time="00:00")
         db.add_all([res1, res2])
         db.commit()
 
-        zone1 = models.Zone(restaurant_id=res1.id, name="Основной зал")
-        zone2 = models.Zone(restaurant_id=res1.id, name="Терраса")
-        zone3 = models.Zone(restaurant_id=res2.id, name="VIP-зал")
-        db.add_all([zone1, zone2, zone3])
+        # Zones for Restaurant 1
+        z1_1 = models.Zone(restaurant_id=res1.id, name="Основной зал")
+        z1_2 = models.Zone(restaurant_id=res1.id, name="Летняя терраса")
+        z1_3 = models.Zone(restaurant_id=res1.id, name="VIP-кабинеты")
+
+        # Zones for Restaurant 2
+        z2_1 = models.Zone(restaurant_id=res2.id, name="Главный зал")
+        z2_2 = models.Zone(restaurant_id=res2.id, name="Зимний сад")
+        z2_3 = models.Zone(restaurant_id=res2.id, name="Банкетный зал")
+
+        db.add_all([z1_1, z1_2, z1_3, z2_1, z2_2, z2_3])
         db.commit()
 
-        tables1 = [
-            models.Table(zone_id=zone1.id, number=1, capacity=2, x_coord=10.0, y_coord=10.0),
-            models.Table(zone_id=zone1.id, number=2, capacity=2, x_coord=20.0, y_coord=10.0),
-            models.Table(zone_id=zone1.id, number=3, capacity=4, x_coord=10.0, y_coord=20.0),
-            models.Table(zone_id=zone2.id, number=4, capacity=2, x_coord=50.0, y_coord=50.0),
+        # Tables for Restaurant 1 - Main Hall
+        tables1_1 = [
+            models.Table(zone_id=z1_1.id, number=1, capacity=2, x_coord=80, y_coord=80),
+            models.Table(zone_id=z1_1.id, number=2, capacity=2, x_coord=200, y_coord=80),
+            models.Table(zone_id=z1_1.id, number=3, capacity=4, x_coord=80, y_coord=180),
+            models.Table(zone_id=z1_1.id, number=4, capacity=4, x_coord=200, y_coord=180),
+            models.Table(zone_id=z1_1.id, number=5, capacity=6, x_coord=350, y_coord=130),
+        ]
+        # Tables for Restaurant 1 - Terrace
+        tables1_2 = [
+            models.Table(zone_id=z1_2.id, number=6, capacity=2, x_coord=100, y_coord=50),
+            models.Table(zone_id=z1_2.id, number=7, capacity=2, x_coord=250, y_coord=50),
+            models.Table(zone_id=z1_2.id, number=8, capacity=4, x_coord=400, y_coord=50),
+        ]
+        # Tables for Restaurant 1 - VIP
+        tables1_3 = [
+            models.Table(zone_id=z1_3.id, number=9, capacity=4, x_coord=150, y_coord=100),
+            models.Table(zone_id=z1_3.id, number=10, capacity=6, x_coord=300, y_coord=100),
         ]
 
-        tables2 = [
-            models.Table(zone_id=zone3.id, number=1, capacity=6, x_coord=100.0, y_coord=100.0),
-            models.Table(zone_id=zone3.id, number=2, capacity=6, x_coord=120.0, y_coord=100.0),
+        # Tables for Restaurant 2 - Main Hall
+        tables2_1 = [
+            models.Table(zone_id=z2_1.id, number=1, capacity=2, x_coord=100, y_coord=100),
+            models.Table(zone_id=z2_1.id, number=2, capacity=2, x_coord=250, y_coord=100),
+            models.Table(zone_id=z2_1.id, number=3, capacity=4, x_coord=100, y_coord=200),
+            models.Table(zone_id=z2_1.id, number=4, capacity=4, x_coord=250, y_coord=200),
+        ]
+        # Tables for Restaurant 2 - Winter Garden
+        tables2_2 = [
+            models.Table(zone_id=z2_2.id, number=5, capacity=2, x_coord=50, y_coord=50),
+            models.Table(zone_id=z2_2.id, number=6, capacity=2, x_coord=150, y_coord=50),
+            models.Table(zone_id=z2_2.id, number=7, capacity=4, x_coord=250, y_coord=50),
+        ]
+        # Tables for Restaurant 2 - Banquet Hall
+        tables2_3 = [
+            models.Table(zone_id=z2_3.id, number=8, capacity=8, x_coord=200, y_coord=150),
+            models.Table(zone_id=z2_3.id, number=9, capacity=10, x_coord=400, y_coord=150),
         ]
 
-        db.add_all(tables1 + tables2)
+        db.add_all(tables1_1 + tables1_2 + tables1_3 + tables2_1 + tables2_2 + tables2_3)
         db.commit()
 
     # 2. Always ensure Default Admin User exists
@@ -63,6 +97,8 @@ def seed_data(db: Session):
         )
         db.add(admin_user)
         db.commit()
+
+@asynccontextmanager
 async def lifespan(app: FastAPI):
     with SessionLocal() as db:
         seed_data(db)

@@ -58,8 +58,14 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
 
 @router.post("/register", response_model=schemas.UserRead)
 def register(user_in: schemas.UserCreate, db: Session = Depends(get_db)):
-    # In a real app, only admins should be able to register users, 
-    # but for the course project we'll allow open registration for simplicity.
+    # Check if user already exists
+    existing_user = db.query(models.User).filter(models.User.username == user_in.username).first()
+    if existing_user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Username already registered"
+        )
+    
     hashed_pw = security.get_password_hash(user_in.password)
     db_user = models.User(
         username=user_in.username,

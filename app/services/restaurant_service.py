@@ -1,4 +1,4 @@
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from app.models import booking as models
 from app.schemas import booking as schemas
 
@@ -17,4 +17,5 @@ class RestaurantService:
 
     @staticmethod
     def get_zones_by_restaurant(db: Session, restaurant_id: int):
-        return db.query(models.Zone).filter(models.Zone.restaurant_id == restaurant_id).all()
+        return db.query(models.Zone).options(joinedload(models.Zone.tables))\
+            .filter(models.Zone.restaurant_id == restaurant_id).all()

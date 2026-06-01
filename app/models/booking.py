@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Boolean, Float
+from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Boolean, Float, Time
 from sqlalchemy.orm import relationship
 from app.db.session import Base
 import datetime
@@ -9,6 +9,8 @@ class Restaurant(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False)
     address = Column(String)
+    opening_time = Column(Time, nullable=False, default="09:00")
+    closing_time = Column(Time, nullable=False, default="23:00")
     
     zones = relationship("Zone", back_populates="restaurant", cascade="all, delete-orphan")
 

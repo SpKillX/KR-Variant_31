@@ -1,13 +1,39 @@
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Query
 from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.schemas import booking as schemas
 from app.services.booking_service import BookingService
 from .auth import get_current_user
+from app.models import booking as models
 from app.models.user import User
 from app.services.notification_service import send_booking_notification
+from datetime import datetime, time
 
 router = APIRouter()
+
+@router.get("/availability", response_model=list[int])
+def get_availability(
+    date: str = Query(..., description="Date in YYYY-MM-DD format"),
+    start_time: str = Query(..., description="Start time in HH:MM format"),
+    end_time: str = Query(..., description="End time in HH:MM format"),
+    db: Session = Depends(get_db)
+):
+    try:
+        # Parse input strings into datetime objects
+        start_dt = datetime.strptime(f"{date} {start_time}", "%Y-%m-%d %H:%M")
+        end_dt = datetime.strptime(f"{date} {end_time}", "%Y-%m-%d %H:%M")
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid date or time format")
+
+    # Get all tables
+    all_tables = db.query(models.Table).all()
+    available_tables = []
+
+    for table in all_tables:
+        if BookingService.is_table_available(db, table.id, start_dt, end_dt):
+            available_tables.append(table.id)
+
+    return available_tables
 
 @router.post("/", response_model=schemas.BookingRead)
 def create_booking(
