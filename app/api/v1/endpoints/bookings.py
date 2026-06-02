@@ -115,12 +115,12 @@ def search_bookings_by_phone(
     db: Session = Depends(get_db), 
     admin: User = Depends(check_admin_role)
 ):
-    # Join with User to get the phone number
-    bookings = db.query(models.Booking).join(User).filter(User.phone == phone).all()
+    # Explicit join to find bookings for the user with the given phone
+    bookings = db.query(models.Booking).join(User).filter(User.phone == phone.strip()).all()
 
     for b in bookings:
+        # Since we joined, b.user is already available
         b.user_phone = b.user.phone if b.user else None
-        # Attach table number and restaurant name
         table = db.query(models.Table).filter(models.Table.id == b.table_id).first()
         if table:
             b.table_number = table.number

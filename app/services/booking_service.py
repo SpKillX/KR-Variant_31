@@ -97,6 +97,22 @@ class BookingService:
             if duration < settings.MIN_BOOKING_DURATION or duration > settings.MAX_BOOKING_DURATION:
                 return "duration_error"
 
+            # Check working hours for the new time
+            table = db.query(models.Table).filter(models.Table.id == new_table_id).first()
+            if table:
+                zone = db.query(models.Zone).filter(models.Zone.id == table.zone_id).first()
+                restaurant = db.query(models.Restaurant).filter(models.Restaurant.id == zone.restaurant_id).first()
+                
+                booking_start = new_start.time()
+                booking_end = new_end.time()
+                
+                actual_closing_time = restaurant.closing_time
+                if actual_closing_time == time(0, 0):
+                    actual_closing_time = time(23, 59, 59)
+
+                if booking_start < restaurant.opening_time or booking_end > actual_closing_time:
+                    return "unavailable"
+
             # To avoid overlapping with itself, we can't just use is_table_available.
             # A simple way for a course project: check if ANY other booking overlaps.
             overlapping = db.query(models.Booking).filter(

@@ -12,4 +12,10 @@ def get_restaurants(db: Session = Depends(get_db)):
 
 @router.get("/{restaurant_id}/zones", response_model=list[schemas.ZoneRead])
 def get_zones(restaurant_id: int, db: Session = Depends(get_db)):
+    # First check if the restaurant exists to return 404 if not found
+    from app.models.booking import Restaurant
+    restaurant = db.query(Restaurant).filter(Restaurant.id == restaurant_id).first()
+    if not restaurant:
+        raise HTTPException(status_code=404, detail="Restaurant not found")
+        
     return RestaurantService.get_zones_by_restaurant(db, restaurant_id)
