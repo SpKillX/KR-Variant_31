@@ -64,9 +64,9 @@
                     <h3 class="text-red-800 font-bold text-lg">🛡️ Панель Администратора</h3>
                     <p class="text-red-600 text-sm">Вы вошли с расширенными правами. Вам доступны инструменты управления залом.</p>
                 </div>
-                <button onclick="alert('В разработке: Редактирование координат столов')" class="bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-red-700 transition">
+                <!--<button onclick="alert('В разработке: Редактирование координат столов')" class="bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-red-700 transition">
                     Управление картой
-                </button>
+                </button>-->
             </div>
         </div>
 
@@ -163,6 +163,7 @@
                         <tr class="bg-gray-100 text-gray-600 text-sm uppercase">
                             <th class="p-3 border">ID</th>
                             <th class="p-3 border">Клиент</th>
+                            <th class="p-3 border">Телефон</th>
                             <th class="p-3 border">Стол</th>
                             <th class="p-3 border">Время</th>
                             <th class="p-3 border text-right">Действия</th>
@@ -478,7 +479,7 @@
         function renderAdminBookings(bookings) {
             const list = document.getElementById('admin-bookings-list');
             if (bookings.length === 0) {
-                list.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-gray-500 italic">Бронирования не найдены</td></tr>';
+                list.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-gray-500 italic">Бронирования не найдены</td></tr>';
                 return;
             }
             list.innerHTML = bookings.map(b => `
@@ -486,7 +487,10 @@
                     <td class="py-2">${b.id}</td>
                     <td class="py-2 font-medium">${b.customer_name}</td>
                     <td class="py-2 text-xs">${b.user_phone || '—'}</td>
-                    <td class="py-2">Стол №${b.table_id}</td>
+                    <td class="py-2">
+                        <div class="font-medium">${b.restaurant_name || 'Неизвестный ресторан'}</div>
+                        <div class="text-xs text-gray-500">Стол №${b.table_number || b.table_id}</div>
+                    </td>
                     <td class="py-2 text-xs">${new Date(b.start_time).toLocaleString()}</td>
                     <td class="py-2 text-right space-x-2">
                         <button onclick="openEditBooking(${JSON.stringify(b).replace(/"/g, '&quot;')})" class="text-indigo-600 hover:text-indigo-800 font-bold">Edit</button>

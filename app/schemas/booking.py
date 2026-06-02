@@ -51,6 +51,8 @@ class BookingCreate(BaseModel):
 class BookingRead(BaseModel):
     id: int
     table_id: int
+    table_number: Optional[int] = None
+    restaurant_name: Optional[str] = None
     customer_name: str
     start_time: datetime
     end_time: datetime

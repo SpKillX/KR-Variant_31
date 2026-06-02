@@ -96,9 +96,16 @@ def get_all_bookings_admin(
     # Join with User to get the phone number
     bookings = db.query(models.Booking).join(User).all()
 
-    # Map phone number to the booking object for the schema
     for b in bookings:
         b.user_phone = b.user.phone if b.user else None
+        # Attach table number and restaurant name
+        table = db.query(models.Table).filter(models.Table.id == b.table_id).first()
+        if table:
+            b.table_number = table.number
+            zone = db.query(models.Zone).filter(models.Zone.id == table.zone_id).first()
+            if zone:
+                restaurant = db.query(models.Restaurant).filter(models.Restaurant.id == zone.restaurant_id).first()
+                b.restaurant_name = restaurant.name if restaurant else None
 
     return bookings
 
@@ -113,6 +120,14 @@ def search_bookings_by_phone(
 
     for b in bookings:
         b.user_phone = b.user.phone if b.user else None
+        # Attach table number and restaurant name
+        table = db.query(models.Table).filter(models.Table.id == b.table_id).first()
+        if table:
+            b.table_number = table.number
+            zone = db.query(models.Zone).filter(models.Zone.id == table.zone_id).first()
+            if zone:
+                restaurant = db.query(models.Restaurant).filter(models.Restaurant.id == zone.restaurant_id).first()
+                b.restaurant_name = restaurant.name if restaurant else None
 
     return bookings
 
