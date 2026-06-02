@@ -115,10 +115,38 @@ def test_create_booking_success(mock_db):
 
 # --- Tests for update_booking ---
 
-def test_update_booking_not_found(mock_db):
-    mock_db.query(models.Booking).filter().first.return_value = None
-    result = BookingService.update_booking(mock_db, 999, {"customer_name": "New"})
-    assert result is None
+def test_update_booking_unavailable(mock_db):
+    existing_booking = models.Booking(id=1, table_id=1, start_time=datetime(2026, 6, 10, 12, 0), end_time=datetime(2026, 6, 10, 14, 0))
+    
+    # Mock a sequence of returns for the availability check inside update_booking
+    mock_db.query.return_value.filter.return_value.first.side_effect = [
+        existing_booking,              # First: find existing booking
+        models.Table(id=1, zone_id=1), # Second: check table
+        models.Zone(id=1, restaurant_id=1), # Third: check zone
+        models.Restaurant(id=1, opening_time=time(9,0), closing_time=time(23,0)), # Fourth: check resto
+        MagicMock()                    # Fifth: overlap found!
+    ]
+    
+    update_data = {
+        "start_time": datetime(2026, 6, 10, 15, 0),
+        "end_time": datetime(2026, 6, 10, 17, 0)
+    }
+    
+    result = BookingService.update_booking(mock_db, 1, update_data)
+    assert result == "unavailable"
+
+def test_update_booking_duration_error(mock_db):
+    existing_booking = models.Booking(id=1, table_id=1, start_time=datetime(2026, 6, 10, 12, 0), end_time=datetime(2026, 6, 10, 14, 0))
+    mock_db.query(models.Booking).filter().first.return_value = existing_booking
+    
+    update_data = {
+        "start_time": datetime(2026, 6, 10, 12, 0),
+        "end_time": datetime(2026, 6, 10, 12, 5) # Too short
+    }
+    
+    result = BookingService.update_booking(mock_db, 1, update_data)
+    assert result == "duration_error"
+
 
 def test_update_booking_duration_error(mock_db):
     existing_booking = models.Booking(id=1, table_id=1, start_time=datetime(2026, 6, 10, 12, 0), end_time=datetime(2026, 6, 10, 14, 0))

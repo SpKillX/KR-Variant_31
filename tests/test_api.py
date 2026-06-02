@@ -126,6 +126,7 @@ def test_get_zones_invalid_restaurant():
     res = client.get("/api/v1/restaurants/999/zones")
     assert res.status_code == 404
 
+
 def test_restaurant_data_integrity():
     res = client.get("/api/v1/restaurants/").json()[0]
     assert "name" in res
@@ -369,4 +370,5 @@ def test_admin_update_working_hours(admin_token, client_token):
     # Move to 07:00 (Resto opens at 09:00)
     res = client.patch(f"/api/v1/bookings/admin/{book['id']}", headers={"Authorization": f"Bearer {admin_token}"}, 
                        json={"start_time": "2026-07-12T07:00:00", "end_time": "2026-07-12T09:00:00"})
+    assert res.status_code == 400
     assert res.status_code == 400

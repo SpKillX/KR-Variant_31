@@ -119,7 +119,7 @@ sequenceDiagram
 
 **Запуск тестов в Docker:**
 ```bash
-docker exec booking_web sh -c "PYTHONPATH=. pytest tests/test_api.py"
+docker exec booking_web sh -c "PYTHONPATH=. pytest tests/"
 ```
 
 ### Ручное тестирование (Seed Data)
