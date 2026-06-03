@@ -16,7 +16,10 @@
             position: relative;
             width: 600px;
             height: 400px;
-            background: #f3f4f6;
+            background-color: #f3f4f6;
+            background-size: 100% 100%;
+            background-repeat: no-repeat;
+            background-position: center;
             border: 2px solid #d1d5db;
             border-radius: 8px;
             margin: 0 auto;
@@ -829,6 +832,20 @@
 
         function renderHallMap(zone) {
             const map = document.getElementById('hall-map');
+            
+            // Map zone names to images
+            const imageMap = {
+                'Основной зал': '/static/img/main_hall.png',
+                'Главный зал': '/static/img/main_hall.png',
+                'Летняя терраса': '/static/img/summer.png',
+                'Зимний сад': '/static/img/winter.png',
+                'VIP-кабинеты': '/static/img/vip.png',
+                'Банкетный зал': '/static/img/banket.png'
+            };
+
+            const bgImage = imageMap[zone.name] || '/static/img/main_hall2.png';
+            map.style.backgroundImage = `url('${bgImage}')`;
+
             map.innerHTML = '';
             zone.tables.forEach(t => {
                 const isAvailable = availableTableIds.includes(t.id);
