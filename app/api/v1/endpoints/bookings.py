@@ -17,7 +17,20 @@ def get_my_bookings(
     db: Session = Depends(get_db), 
     current_user: User = Depends(get_current_user)
 ):
-    return db.query(models.Booking).filter(models.Booking.user_id == current_user.id).all()
+    from sqlalchemy.orm import joinedload
+    
+    # Fetch bookings with joined tables, zones and restaurants to avoid N+1
+    bookings = db.query(models.Booking).options(
+        joinedload(models.Booking.table).joinedload(models.Table.zone).joinedload(models.Zone.restaurant)
+    ).filter(models.Booking.user_id == current_user.id).all()
+
+    for b in bookings:
+        if b.table:
+            b.table_number = b.table.number
+            if b.table.zone and b.table.zone.restaurant:
+                b.restaurant_name = b.table.zone.restaurant.name
+    
+    return bookings
 
 @router.get("/availability", response_model=list[int])
 def get_availability(

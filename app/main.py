@@ -10,16 +10,6 @@ from .db.session import Base, engine, get_db, SessionLocal
 from .models import booking as models
 from .api.v1 import api_router
 
-# Simulation of a notification system
-def send_booking_notification(customer_name: str, table_number: int, start_time: datetime):
-    # In a real app, this would call an SMS/Email API (e.g., Twilio, SendGrid)
-    import time as sleep_module
-    print(f"--- NOTIFICATION SYSTEM ---")
-    print(f"Sending confirmation to {customer_name}...")
-    sleep_module.sleep(2) # Simulate network delay
-    print(f"SUCCESS: Table {table_number} reserved for {start_time}. Notification sent!")
-    print(f"--------------------------")
-
 # Initialize database tables
 Base.metadata.create_all(bind=engine)
 def seed_data(db: Session):

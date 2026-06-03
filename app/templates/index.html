@@ -598,7 +598,7 @@
                         list.innerHTML = bookings.map(b => `
                             <div class="p-2 bg-gray-50 border rounded-lg flex justify-between items-center">
                                 <div>
-                                    <p class="font-bold">Стол №${b.table_id} ${b.customer_name}</p>
+                                    <p class="font-bold">${b.restaurant_name || 'Ресторан'} — Стол №${b.table_number || b.table_id}</p>
                                     <p class="text-xs text-gray-500">${new Date(b.start_time).toLocaleString()}</p>
                                 </div>
                                 <button onclick="cancelBooking(${b.id})" class="text-red-500 hover:text-red-700 text-xs font-bold">Отменить</button>
